@@ -205,13 +205,13 @@
       async () => {
         const r = await fetch('https://ipwho.is/');
         const d = await r.json();
-        if (!d.success) throw new Error('failed');
+        if (!d.success) throw new Error('ipwho failed: ' + JSON.stringify(d));
         return { ip: d.ip, city: d.city, regionName: d.region, country: d.country, isp: (d.connection && (d.connection.isp || d.connection.org)) || '—', lat: d.latitude, lon: d.longitude };
       },
       async () => {
         const r = await fetch('https://ipapi.co/json/');
         const d = await r.json();
-        if (d.error) throw new Error('failed');
+        if (d.error) throw new Error('ipapi failed: ' + JSON.stringify(d));
         return { ip: d.ip, city: d.city, regionName: d.region, country: d.country_name, isp: d.org || '—', lat: d.latitude, lon: d.longitude };
       },
       async () => {
@@ -220,10 +220,11 @@
         return { ip: d.ipAddress, city: d.cityName, regionName: d.regionName, country: d.countryName, isp: '—', lat: d.latitude, lon: d.longitude };
       }
     ];
+    const errors = [];
     for (const api of apis) {
-      try { return await api(); } catch(e) { continue; }
+      try { return await api(); } catch(e) { errors.push(e.message); continue; }
     }
-    throw new Error('all apis failed');
+    throw new Error('All APIs failed: ' + errors.join(' | '));
   }
 
   async function startReveal() {
@@ -231,7 +232,8 @@
     try {
       data = await fetchIP();
     } catch(e) {
-      data = { ip: 'unavailable', city: '???', regionName: '???', country: '???', isp: '???', lat: '?', lon: '?' };
+      document.getElementById('out-ip').textContent = 'ERROR: ' + e.message;
+      data = { ip: 'error', city: '???', regionName: '???', country: '???', isp: '???', lat: '?', lon: '?' };
     }
 
     document.getElementById('out-ip').textContent     = data.ip || 'unavailable';
