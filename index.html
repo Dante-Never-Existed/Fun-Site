@@ -25,10 +25,11 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      padding: 2rem;
+      justify-content: flex-start;
+      padding: 2rem 2rem 4rem;
       position: relative;
-      overflow: hidden;
+      overflow-y: auto;
+      overflow-x: hidden;
     }
 
     /* Subtle background grid */
@@ -359,23 +360,23 @@
 
 <script>
   async function fetchIP() {
-    // Try multiple APIs in case one fails
     const apis = [
       async () => {
         const r = await fetch('https://ipwho.is/');
         const d = await r.json();
         if (!d.success) throw new Error('failed');
-        return { ip: d.ip, city: d.city, regionName: d.region, country: d.country, isp: d.connection?.isp || d.connection?.org, lat: d.latitude, lon: d.longitude };
-      },
-      async () => {
-        const r = await fetch('https://freeipapi.com/api/json');
-        const d = await r.json();
-        return { ip: d.ipAddress, city: d.cityName, regionName: d.regionName, country: d.countryName, isp: d.isp || '—', lat: d.latitude, lon: d.longitude };
+        return { ip: d.ip, city: d.city, regionName: d.region, country: d.country, isp: (d.connection && (d.connection.isp || d.connection.org)) || '—', lat: d.latitude, lon: d.longitude };
       },
       async () => {
         const r = await fetch('https://ipapi.co/json/');
         const d = await r.json();
-        return { ip: d.ip, city: d.city, regionName: d.region, country: d.country_name, isp: d.org, lat: d.latitude, lon: d.longitude };
+        if (d.error) throw new Error('failed');
+        return { ip: d.ip, city: d.city, regionName: d.region, country: d.country_name, isp: d.org || '—', lat: d.latitude, lon: d.longitude };
+      },
+      async () => {
+        const r = await fetch('https://freeipapi.com/api/json');
+        const d = await r.json();
+        return { ip: d.ipAddress, city: d.cityName, regionName: d.regionName, country: d.countryName, isp: '—', lat: d.latitude, lon: d.longitude };
       }
     ];
     for (const api of apis) {
@@ -405,7 +406,7 @@
     try {
       data = await dataPromise;
     } catch(e) {
-      data = { ip: 'unavailable', city: '???', region: '???', country_name: '???', org: '???', latitude: '?', longitude: '?' };
+      data = { ip: 'unavailable', city: '???', regionName: '???', country: '???', isp: '???', lat: '?', lon: '?' };
     }
 
     await delay(400);
