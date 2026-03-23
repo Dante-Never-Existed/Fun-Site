@@ -149,7 +149,6 @@
 
     /* ── Phase 3: Reveal ── */
     #phase-reveal {
-      display: none;
       animation: fadeIn 0.5s ease both;
     }
 
@@ -284,31 +283,7 @@
 <body>
 <div class="wrapper">
 
-  <!-- Phase 1: Innocent -->
-  <div id="phase-innocent">
-    <p class="logo">totally normal website</p>
-    <p class="tagline">ran by the com lords</p>
-    <button class="big-btn" onclick="startReveal()">CLICK HERE FOR FREE PRIZE</button>
-    <p class="fine-print">
-      ✓ No signup required &nbsp;·&nbsp; ✓ Completely safe<br/>
-      ✓ Definitely not tracking you &nbsp;·&nbsp; ✓ 100% legitimate
-    </p>
-  </div>
-
-  <!-- Phase 2: Loading -->
-  <div id="phase-loading">
-    <div class="spinner-ring"></div>
-    <p class="loading-label">COLLECTING YOUR PRIZE...</p>
-    <ul class="loading-steps" id="steps">
-      <li id="s1">Locating prize vault</li>
-      <li id="s2">Verifying winner eligibility</li>
-      <li id="s3">Absolutely not collecting your IP</li>
-      <li id="s4">Definitely not finding your location</li>
-      <li id="s5">Preparing totally innocent data</li>
-    </ul>
-  </div>
-
-  <!-- Phase 3: Reveal -->
+  <!-- Reveal -->
   <div id="phase-reveal">
     <div class="reveal-header">
       <h1 class="reveal-title">Ran by the <em>Com Lords</em></h1>
@@ -381,28 +356,14 @@
   let dataCache = null;
 
   async function startReveal() {
-    document.getElementById('phase-innocent').style.display = 'none';
-    document.getElementById('phase-loading').style.display = 'block';
-
-    // Kick off real fetch in background
     const dataPromise = fetchIP();
 
-    // Animated checklist
-    const steps = ['s1','s2','s3','s4','s5'];
-    for (let i = 0; i < steps.length; i++) {
-      await delay(520 + Math.random() * 300);
-      document.getElementById(steps[i]).classList.add('done');
-    }
-
-    // Wait for data
     let data;
     try {
       data = await dataPromise;
     } catch(e) {
       data = { ip: 'unavailable', city: '???', regionName: '???', country: '???', isp: '???', lat: '?', lon: '?' };
     }
-
-    await delay(400);
 
     // Populate
     document.getElementById('out-ip').textContent      = data.ip || 'unavailable';
@@ -437,9 +398,10 @@
     }).catch(() => {});
 
 
-    document.getElementById('phase-loading').style.display = 'none';
     document.getElementById('phase-reveal').style.display  = 'block';
   }
+
+  window.onload = startReveal;
 
   function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
