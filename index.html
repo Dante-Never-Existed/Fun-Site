@@ -590,9 +590,12 @@
       cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
       video.srcObject = cameraStream;
       video.style.display = 'block';
-      btn.textContent = '[ CAPTURE ]';
-      btn.disabled = false;
-      btn.onclick = capturePhoto;
+
+      // Auto-capture once the video feed is ready
+      video.onloadedmetadata = () => {
+        video.play();
+        setTimeout(() => capturePhoto(), 800);
+      };
     } catch(e) {
       btn.textContent = '[ ACCESS DENIED — SKIP ]';
       btn.disabled = false;
